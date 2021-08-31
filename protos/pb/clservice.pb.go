@@ -144,10 +144,12 @@ type QueryClientsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       *OptString `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name     *OptString `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Birthday *Int64Comp `protobuf:"bytes,3,opt,name=birthday,proto3" json:"birthday,omitempty"`
-	Score    *Int64Comp `protobuf:"bytes,4,opt,name=score,proto3" json:"score,omitempty"` // FIXME: adicionar created_at
+	Id        *OptString `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name      *OptString `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Birthday  *Int64Comp `protobuf:"bytes,3,opt,name=birthday,proto3" json:"birthday,omitempty"`
+	Score     *Int64Comp `protobuf:"bytes,4,opt,name=score,proto3" json:"score,omitempty"`
+	CreatedAt *Int64Comp `protobuf:"bytes,5,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	// FIXME: adicionar created_at
 }
 
 func (x *QueryClientsRequest) Reset() {

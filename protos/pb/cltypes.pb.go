@@ -30,10 +30,12 @@ type Client struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name     string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Birthday int64  `protobuf:"varint,3,opt,name=birthday,proto3" json:"birthday,omitempty"`
-	Score    int64  `protobuf:"varint,4,opt,name=score,proto3" json:"score,omitempty"` // FIXME: adicionar created_at
+	Id        string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name      string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Birthday  int64  `protobuf:"varint,3,opt,name=birthday,proto3" json:"birthday,omitempty"`
+	Score     int64  `protobuf:"varint,4,opt,name=score,proto3" json:"score,omitempty"`
+	CreatedAt int64  `protobuf:"varint,5,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	// FIXME: adicionar created_at
 }
 
 func (x *Client) Reset() {
