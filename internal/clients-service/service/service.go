@@ -73,6 +73,8 @@ func (s *Service) NewClient(ctx context.Context, req *pb.NewClientRequest) (*pb.
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("q: ", q)
+	fmt.Println("args: ", args)
 
 	_, err = s.db.ExecContext(ctx, q, args...)
 	if err != nil {
