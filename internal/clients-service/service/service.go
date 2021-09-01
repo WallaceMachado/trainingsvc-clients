@@ -31,13 +31,14 @@ func New(ctx context.Context, sv *grpc.Server, config Config) error {
 
 	go svc.cleanup(ctx) // executa antes de fechar o app
 
-	//pb.RegisterClientsServiceServer(sv, svc)
+	pb.RegisterClientsServiceServer(sv, svc)
 
 	return nil
 }
 
 type Service struct {
 	db *sqlx.DB
+	pb.UnimplementedClientsServiceServer
 }
 
 func (s *Service) cleanup(ctx context.Context) {
@@ -45,7 +46,7 @@ func (s *Service) cleanup(ctx context.Context) {
 	s.db.Close()
 }
 
-//var _ pb.ClientsServiceServer = (*Service)(nil) // compile time check if we support the public proto interface
+var _ pb.ClientsServiceServer = (*Service)(nil) // compile time check if we support the public proto interface
 
 // NewClient creates a new client on the database
 func (s *Service) NewClient(ctx context.Context, req *pb.NewClientRequest) (*pb.NewClientResponse, error) {
@@ -65,7 +66,7 @@ func (s *Service) NewClient(ctx context.Context, req *pb.NewClientRequest) (*pb.
 		cols, vals = append(cols, "birthday"), append(vals, time.Unix(0, req.Birthday))
 	}
 
-	cols, vals = append(cols, "name"), append(vals, req.Score)
+	cols, vals = append(cols, "score"), append(vals, req.Score)
 	//FIXME: adicionar score
 
 	q, args, err := sq.Insert("clients").Columns(cols...).Values(vals...).ToSql()
@@ -100,21 +101,25 @@ func (s *Service) QueryClients(ctx context.Context, req *pb.QueryClientsRequest)
 	}
 
 	if req.CreatedAt != nil {
-		rq = req.CreatedAt.Where("created_at", rq)
+		rq = req.CreatedAt.Where("birthday", rq)
 	}
 	//FIXME: adicionar created_at
 
-	rq.OrderBy("score DESC")
+	rq = rq.OrderBy("score DESC")
 	//FIXME: ordenar por score! (DESC)
 
+	fmt.Println("rq: ")
 	q, args, err := rq.ToSql()
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("rq: ", q)
 	ids := make([]string, 0)
 	if err := s.db.SelectContext(ctx, &ids, q, args...); err != nil {
 		return nil, err
 	}
+
+	fmt.Println("ids: ", ids)
 
 	return &pb.QueryClientsResponse{
 		Ids: ids,
@@ -122,15 +127,20 @@ func (s *Service) QueryClients(ctx context.Context, req *pb.QueryClientsRequest)
 }
 
 func (s *Service) GetClients(ctx context.Context, req *pb.GetClientsRequest) (*pb.GetClientsResponse, error) {
+	fmt.Println("req: ", req)
 	ifids := make([]interface{}, 0, len(req.Ids))
 	for _, v := range req.Ids {
 		ifids = append(ifids, v)
 	}
+
+	fmt.Println("ifids: ", ifids)
 	q, args, err := sq.Select("id", "name", "birthday", "score", "created_at").From("`clients`").
 		Where(fmt.Sprintf("id IN (%s)", sq.Placeholders(len(ifids))), ifids...).ToSql()
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("q 2 : ", q)
+	fmt.Println("args : ", args)
 	rawclients := []struct {
 		ID        string        `db:"id"`
 		Name      string        `db:"name"`
@@ -141,6 +151,7 @@ func (s *Service) GetClients(ctx context.Context, req *pb.GetClientsRequest) (*p
 	if err := s.db.SelectContext(ctx, &rawclients, q, args...); err != nil {
 		return nil, err
 	}
+	fmt.Println("rawclients : ", rawclients)
 	resp := &pb.GetClientsResponse{
 		Clients: make([]*pb.Client, 0, len(rawclients)),
 	}
@@ -154,6 +165,7 @@ func (s *Service) GetClients(ctx context.Context, req *pb.GetClientsRequest) (*p
 			//FIXME: adicionar created_at
 		})
 	}
+	fmt.Println("resp : ", resp)
 	return resp, nil
 }
 
@@ -198,10 +210,25 @@ func (s *Service) DeleteAllClients(ctx context.Context, req *pb.DeleteAllClients
 }
 
 //FIXME: implementar Sort()
-func Sort(ctx context.Context, req *pb.SortRequest) (*pb.SortResponse, error) {
+func (s *Service) Sort(ctx context.Context, req *pb.SortRequest) (*pb.SortResponse, error) {
 	items := req.Items
 
 	sort.Strings(items)
 
-	return &pb.SortResponse{Items: items}, nil
+	if req.RemoveDuplicates {
+		item := items[0]
+
+		listUniqueValues := []string{item}
+
+		for _, value := range items {
+			if value != item {
+				listUniqueValues = append(listUniqueValues, value)
+				item = value
+			}
+		}
+		return &pb.SortResponse{Items: listUniqueValues}, nil
+	} else {
+
+		return &pb.SortResponse{Items: items}, nil
+	}
 }

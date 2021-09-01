@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -73,6 +74,8 @@ func runTests(cl pb.ClientsServiceClient) error {
 		if err != nil {
 			return cli.NewExitError("should be Alice but is err: "+err.Error(), 9)
 		}
+		fmt.Println("aliceId: ", aliceidResp.Id)
+		fmt.Println("Id: ", r.Ids)
 		if r.Ids[0] != aliceidResp.Id {
 			return cli.NewExitError("should be Alice ID", 9)
 		}
@@ -119,14 +122,6 @@ func runTests(cl pb.ClientsServiceClient) error {
 		return cli.NewExitError(err, 11)
 	}
 
-	// adding a score to Alice should result in an error now
-	if _, err := cl.NewMatch(ctx, &pb.NewMatchRequest{
-		ClientId: aliceidResp.Id,
-		Score:    10,
-	}); err == nil {
-		return cli.NewExitError("should not add score to Alice (deleted)", 12)
-	}
-
 	xclients, err = cl.GetClients(ctx, &pb.GetClientsRequest{
 		Ids: []string{bobidResp.Id},
 	})
@@ -141,6 +136,9 @@ func runTests(cl pb.ClientsServiceClient) error {
 		Items:            []string{"a", "c", "b", "b", "x", "aaa", "z1"},
 		RemoveDuplicates: true,
 	})
+	if err != nil {
+		return cli.NewExitError(err.Error(), 13)
+	}
 
 	if len(resp.Items) != 6 {
 		return cli.NewExitError("invalid length", 15)
@@ -156,6 +154,14 @@ func runTests(cl pb.ClientsServiceClient) error {
 
 	if resp.Items[5] != "z1" {
 		return cli.NewExitError("invalid val", 16)
+	}
+
+	// adding a score to Alice should result in an error now
+	if _, err := cl.NewMatch(ctx, &pb.NewMatchRequest{
+		ClientId: aliceidResp.Id,
+		Score:    10,
+	}); err == nil {
+		return cli.NewExitError("should not add score to Alice (deleted)", 12)
 	}
 
 	println("SUCCESS!")
