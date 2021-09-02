@@ -59,28 +59,26 @@ func (s *Service) NewClient(ctx context.Context, req *pb.NewClientRequest) (*pb.
 
 	cols, vals = append(cols, "id"), append(vals, id)
 
-	cols, vals = append(cols, "name"), append(vals, req.Name)
 	//FIXME: adicionar name
+	cols, vals = append(cols, "name"), append(vals, req.Name)
 
 	if req.Birthday != 0 {
 		cols, vals = append(cols, "birthday"), append(vals, time.Unix(0, req.Birthday))
 	}
 
-	cols, vals = append(cols, "score"), append(vals, req.Score)
 	//FIXME: adicionar score
+	cols, vals = append(cols, "score"), append(vals, req.Score)
 
 	q, args, err := sq.Insert("clients").Columns(cols...).Values(vals...).ToSql()
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("q: ", q)
-	fmt.Println("args: ", args)
 
+	//FIXME: executar query com s.db.ExecCtx...
 	_, err = s.db.ExecContext(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}
-	//FIXME: executar query com s.db.ExecCtx...
 
 	return &pb.NewClientResponse{
 		Id: id,
@@ -102,26 +100,23 @@ func (s *Service) QueryClients(ctx context.Context, req *pb.QueryClientsRequest)
 		rq = req.Score.Where("score", rq)
 	}
 
-	if req.CreatedAt != nil {
-		rq = req.CreatedAt.Where("birthday", rq)
-	}
 	//FIXME: adicionar created_at
+	if req.CreatedAt != nil {
+		rq = req.CreatedAt.Where("create_at", rq)
+	}
 
-	rq = rq.OrderBy("score DESC")
 	//FIXME: ordenar por score! (DESC)
+	rq = rq.OrderBy("score DESC")
 
-	fmt.Println("rq: ")
 	q, args, err := rq.ToSql()
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("rq: ", q)
+
 	ids := make([]string, 0)
 	if err := s.db.SelectContext(ctx, &ids, q, args...); err != nil {
 		return nil, err
 	}
-
-	fmt.Println("ids: ", ids)
 
 	return &pb.QueryClientsResponse{
 		Ids: ids,
@@ -129,20 +124,18 @@ func (s *Service) QueryClients(ctx context.Context, req *pb.QueryClientsRequest)
 }
 
 func (s *Service) GetClients(ctx context.Context, req *pb.GetClientsRequest) (*pb.GetClientsResponse, error) {
-	fmt.Println("req: ", req)
+
 	ifids := make([]interface{}, 0, len(req.Ids))
 	for _, v := range req.Ids {
 		ifids = append(ifids, v)
 	}
 
-	fmt.Println("ifids: ", ifids)
 	q, args, err := sq.Select("id", "name", "birthday", "score", "created_at").From("`clients`").
 		Where(fmt.Sprintf("id IN (%s)", sq.Placeholders(len(ifids))), ifids...).ToSql()
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("q 2 : ", q)
-	fmt.Println("args : ", args)
+
 	rawclients := []struct {
 		ID        string        `db:"id"`
 		Name      string        `db:"name"`
@@ -153,7 +146,7 @@ func (s *Service) GetClients(ctx context.Context, req *pb.GetClientsRequest) (*p
 	if err := s.db.SelectContext(ctx, &rawclients, q, args...); err != nil {
 		return nil, err
 	}
-	fmt.Println("rawclients : ", rawclients)
+
 	resp := &pb.GetClientsResponse{
 		Clients: make([]*pb.Client, 0, len(rawclients)),
 	}
@@ -163,11 +156,11 @@ func (s *Service) GetClients(ctx context.Context, req *pb.GetClientsRequest) (*p
 			Name:      v.Name,
 			Birthday:  v.Birthday.Time.UnixNano(),
 			Score:     v.Score.Int64,
-			CreatedAt: v.CreatedAt.Time.UnixNano(),
-			//FIXME: adicionar created_at
+			CreatedAt: v.CreatedAt.Time.UnixNano(), //FIXME: adicionar created_at
+
 		})
 	}
-	fmt.Println("resp : ", resp)
+
 	return resp, nil
 }
 
@@ -179,19 +172,21 @@ func (s *Service) NewMatch(ctx context.Context, req *pb.NewMatchRequest) (*pb.Ne
 		return nil, err
 	}
 	defer tx.Commit()
-	var lastId int64
-	if resp, err := tx.Exec("INSERT INTO client_matches (client_id, score) VALUES (?, ?)", req.ClientId, req.Score); err != nil {
+
+	resp, err := tx.Exec("INSERT INTO client_matches (client_id, score) VALUES (?, ?)", req.ClientId, req.Score)
+	if err != nil {
 		_ = tx.Rollback()
-		lastId, _ = resp.LastInsertId()
+
 		return nil, err
 	}
+	lastId, _ := resp.LastInsertId()
 
+	//FIXME: tx -> UPDATE clients SET score = score + ? WHERE id = ?
 	if _, err := tx.Exec("UPDATE clients SET score = score + ? WHERE id = ?", req.Score, req.ClientId); err != nil {
 		_ = tx.Rollback()
 
 		return nil, err
 	}
-	//FIXME: tx -> UPDATE clients SET score = score + ? WHERE id = ?
 
 	return &pb.NewMatchResponse{Id: lastId}, nil //TODO: trocar linha por implementação
 }

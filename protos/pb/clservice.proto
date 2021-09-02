@@ -30,6 +30,7 @@ message QueryClientsRequest {
   OptString name = 2;
   Int64Comp birthday = 3;
   Int64Comp score = 4;
+  Int64Comp created_at = 5;
   // FIXME: adicionar created_at
 }
 

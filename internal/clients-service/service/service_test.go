@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -41,7 +40,7 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestGetClients(t *testing.T) {
-
+	//FIXME: escrever teste
 	service, mock := newTestService(t)
 
 	id := utils.SecureID().String()
@@ -57,8 +56,6 @@ func TestGetClients(t *testing.T) {
 	resp, err := service.GetClients(context.Background(), &pb.GetClientsRequest{
 		Ids: []string{id},
 	})
-
-	fmt.Println("resp: ", resp)
 
 	assert.NotNil(t, resp)
 	assert.NoError(t, err)
